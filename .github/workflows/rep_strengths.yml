@@ -1,13 +1,13 @@
-name: Open Pipeline Health
+name: Rep Strengths
 
 on:
   schedule:
-    - cron: "45 7 * * *"      # 09:45 Cairo (UTC+2) — after Claude's 08:31 note review
+    - cron: "30 5 * * *"      # 07:30 Cairo every morning (08:30 in summer time)
   workflow_dispatch: {}        # "Run workflow" button
 
 permissions:
   contents: read
-  pages: write                 # needed to publish to GitHub Pages
+  pages: write
   id-token: write
 
 concurrency:
@@ -28,24 +28,19 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
 
-      - name: Build dashboard + write All_Notes tab
+      - name: Read master sheet + build dashboard
         env:
-          SF_USERNAME: ${{ secrets.SF_USERNAME }}
-          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
-          SF_SECURITY_TOKEN: ${{ secrets.SF_SECURITY_TOKEN }}
-          SF_DOMAIN: ${{ secrets.SF_DOMAIN }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           TZ: Africa/Cairo
         run: |
-          rm -f Open_Pipeline_Health_*.html
-          python pipeline_health.py
+          rm -f Rep_Strengths_*.html Rep_Strengths_*.xlsx
+          python run_github.py
 
       - name: Prepare GitHub Pages site (index.html = today's dashboard)
         run: |
           mkdir -p site
-          cp "$(ls -t Open_Pipeline_Health_*.html | head -1)" site/index.html
+          cp "$(ls -t Rep_Strengths_*.html | head -1)" site/index.html
           printf 'User-agent: *\nDisallow: /\n' > site/robots.txt
-          echo "Publishing dashboard $(grep -o '"generated": *"[^"]*"' site/index.html | head -1)"
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -55,10 +50,10 @@ jobs:
         name: Publish to GitHub Pages
         uses: actions/deploy-pages@v4
 
-      - uses: actions/upload-artifact@v4
+      - name: Keep the Excel file (download from the run page — NOT published)
+        uses: actions/upload-artifact@v4
         with:
-          name: open-pipeline-health
+          name: rep-strengths
           path: |
-            Open_Pipeline_Health_*.html
-            Notes_To_Review_*.csv
-          if-no-files-found: warn
+            Rep_Strengths_*.html
+            Rep_Strengths_*.xlsx
